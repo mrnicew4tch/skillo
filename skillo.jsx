@@ -49,9 +49,16 @@ const Skillo = forwardRef(function Skillo(props, ref) {
 
   const notify = useCallback(
     (message) => {
-      setPendingMessage(message || "Hej! Mam coś dla Ciebie.");
-      setHasNotification(true);
-      wave();
+      setHasNotification((prev) => {
+        const next = !prev;
+        if (next) {
+          setPendingMessage(message || "Hej! Mam coś dla Ciebie.");
+          wave();
+        } else {
+          setPendingMessage(null);
+        }
+        return next;
+      });
     },
     [wave]
   );

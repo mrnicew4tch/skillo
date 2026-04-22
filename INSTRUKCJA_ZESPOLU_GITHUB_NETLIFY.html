@@ -208,15 +208,32 @@ git push -u origin main</pre>
 
       <h2>3) Podglad online w Netlify</h2>
       <ol>
-        <li>Zaloguj sie do <code>netlify.com</code> przez GitHub.</li>
+        <li>Zaloguj sie do <code>netlify.com</code> (dowolnym sposobem).</li>
+        <li>Polacz konto Netlify z GitHubem (autoryzuj dostep do repo).</li>
+        <li>
+          Gdy Netlify pyta o dostep do repozytoriow:
+          <ul>
+            <li><code>All repositories</code> - najszybciej na start, ale daje szerszy dostep.</li>
+            <li><code>Only select repositories</code> - bezpieczniej; wybierasz tylko repo projektu.</li>
+          </ul>
+        </li>
         <li><code>Add new site -&gt; Import an existing project</code>.</li>
         <li>Wybierz swoje repo projektu.</li>
+        <li>
+          Na ekranie konfiguracji uzupelnij tylko to, co potrzebne:
+          <ul>
+            <li><code>Project name</code> - wpisz nazwe podgladu (mozna potem zmienic).</li>
+            <li><code>Branch to deploy</code> - zwykle <code>main</code>.</li>
+            <li><code>Build command</code> - dla React/Vite: <code>npm run build</code>.</li>
+            <li><code>Publish directory</code> - dla React/Vite: <code>dist</code>.</li>
+            <li><code>Base directory</code> - zostaw puste, jesli projekt jest w glownym katalogu repo.</li>
+          </ul>
+        </li>
         <li>Kliknij <code>Deploy site</code>.</li>
       </ol>
       <p class="muted">
-        Dla React/Vite najczesciej ustaw:
-        <code>Build command: npm run build</code>,
-        <code>Publish directory: dist</code>.
+        W typowym projekcie frontendowym zwykle wystarczy uzupelnic <code>Project name</code>, a pozostale ustawienia pozostawic domyslne.
+        Jesli build sie nie powiedzie, sprawdz najpierw <code>Build command</code> i <code>Publish directory</code>.
       </p>
       <p class="ok">Od teraz: kazdy push na GitHub = automatyczna aktualizacja podgladu.</p>
 
@@ -224,7 +241,7 @@ git push -u origin main</pre>
       <ol>
         <li>GitHub repo -&gt; <code>Settings -&gt; Collaborators -&gt; Add people</code>.</li>
         <li>Kazdy grafik akceptuje zaproszenie.</li>
-        <li>Kazdy grafik klonuje repo (jednorazowo):</li>
+        <li>Kazdy grafik otwiera Cursor, uruchamia terminal i klonuje repo (jednorazowo):</li>
       </ol>
       <pre>git clone https://github.com/TWOJ_LOGIN/NAZWA_REPO.git</pre>
 
@@ -235,7 +252,7 @@ git push -u origin main</pre>
       <ol>
         <li>Popros ownera o dodanie Ciebie jako collaborator w GitHub.</li>
         <li>Zaakceptuj zaproszenie z maila lub z powiadomienia na GitHub.</li>
-        <li>W Cursor otworz terminal i sklonuj repo:</li>
+        <li>W Cursor otworz terminal (View -&gt; Terminal) i sklonuj repo:</li>
       </ol>
       <pre>git clone https://github.com/TWOJ_LOGIN/NAZWA_REPO.git
 cd "NAZWA_REPO"</pre>
@@ -248,16 +265,33 @@ cd "NAZWA_REPO"</pre>
       <div class="grid">
         <div class="box">
           <strong>Przed praca:</strong>
+          <p class="muted">Wpisujesz w terminalu w Cursorze, bedac w folderze projektu (tam, gdzie jest repo).</p>
           <pre>git pull</pre>
+          <p class="muted">
+            <code>git pull</code> pobiera najnowsze zmiany z GitHuba i laczy je z Twoja lokalna kopia projektu.
+            To inicjuje synchronizacje "zdalne -&gt; lokalne" przed rozpoczeciem pracy.
+          </p>
         </div>
         <div class="box">
           <strong>Po pracy:</strong>
+          <p class="muted">Wpisujesz w terminalu w Cursorze, bedac w folderze projektu.</p>
           <pre>git add .
 git commit -m "Krotki opis zmian"
 git push</pre>
+          <p class="muted">
+            <code>git add .</code> przygotowuje zmienione pliki do zapisu, a <code>git commit</code> tworzy lokalny punkt historii.
+            <code>git push</code> wysyla te zapisane zmiany na GitHuba i inicjuje aktualizacje zdalnego repo
+            (oraz automatyczny deploy, jesli projekt jest podlaczony np. do Netlify).
+          </p>
         </div>
       </div>
-      <p class="muted">Alternatywnie mozna poprosic Cursora po polsku o wykonanie tych krokow.</p>
+      <p class="muted">
+        Alternatywnie mozna poprosic Cursora po polsku o wykonanie tych krokow, np. "zrob git pull" albo
+        "zapisz zmiany i wyslij na GitHuba".
+      </p>
+      <p class="muted">
+        Jesli nie masz pewnosci, czy jestes w dobrym folderze, wpisz <code>pwd</code> (PowerShell) i sprawdz, czy to folder projektu.
+      </p>
 
       <h2>7) Gdy pojawi sie konflikt</h2>
       <ol>
@@ -269,6 +303,19 @@ git push</pre>
 git commit -m "Resolve merge conflict"
 git push</pre>
       <p class="warn-text">Najwazniejsze: nie usuwaj plikow "na sile", tylko rozwiazuj konflikt swiadomie.</p>
+
+      <h2>8) Szybkie naprawy (najczestsze)</h2>
+      <div class="box warn">
+        <strong>Netlify: "vite: Permission denied"</strong>
+        <p class="muted">Objaw: deploy failuje podczas builda, mimo ze lokalnie projekt sie buduje.</p>
+        <p class="muted">Naprawa w Netlify - Build settings - Build command:</p>
+        <pre>chmod +x node_modules/.bin/vite && npm run build</pre>
+        <p class="muted">Potem uruchom: <code>Deploy project without cache</code>.</p>
+      </div>
+      <div class="box tip">
+        <strong>W razie dowolnego bledu:</strong> skonsultuj sie z AI w Cursorze i wklej fragment loga/komunikat.
+        AI poprowadzi Cie krok po kroku do naprawy.
+      </div>
 
       <footer>
         Dokument zespolowy. W razie pytan: wrzuc screen bledu i tresc komendy z terminala.
