@@ -2,8 +2,11 @@
 //
 // Requirements:
 //   - React 18+, Tailwind CSS
-//   - place skillo-body.webp and skillo-hand.webp next to this file
-//   - Satoshi is loaded via <style> @import - remove if you self-host it
+//   - place three files next to this component:
+//       skillo-body.webp       (body with eyes ERASED - for animated hero with tracking pupils)
+//       skillo-body-full.webp  (body with eyes - for the chat header avatar)
+//       skillo-hand.webp       (waving hand)
+//   - Satoshi loaded via <style> @import - remove if self-hosted
 //
 // Usage:
 //   import Skillo from "./Skillo";
@@ -12,17 +15,25 @@
 //   ref.current.wave();           // trigger wave animation
 //   ref.current.notify("text");   // wave + red dot + open chat with message
 //
-// IMPORTANT: this component posts to /api/chat for AI replies.
-// Implement that endpoint on your backend. It receives:
+// Features:
+//   - Eyes follow the cursor (bottom-right mascot only)
+//   - Hand only appears while waving (fades in, scales)
+//   - Mascot pulses in/out with the wave rhythm - more attention-grabbing
+//   - Header avatar has static eyes (does not track cursor)
+//
+// IMPORTANT: posts to /api/chat for AI replies.
+// Implement that endpoint on your backend, receiving:
 //   { messages: [{ role: "user"|"assistant", content: "..." }, ...] }
-// It must return { reply: "..." }.
-// Keep your Anthropic API key server-side, never in the frontend.
+// and returning: { reply: "..." }
+// Keep Anthropic API key server-side.
 
 import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react";
 import bodyImg from "./skillo-body.webp";
+import bodyImgFull from "./skillo-body-full.webp";
 import handImg from "./skillo-hand.webp";
 
 const BODY_IMG = bodyImg;
+const BODY_IMG_FULL = bodyImgFull;
 const HAND_IMG = handImg;
 
 const BRAND = "#42079E";
@@ -40,11 +51,19 @@ const Skillo = forwardRef(function Skillo(props, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [waveKey, setWaveKey] = useState(0);
+  const [isWaving, setIsWaving] = useState(false);
   const [hasNotification, setHasNotification] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
+  const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
+  const heroContainerRef = useRef(null);
+  const waveTimeoutRef = useRef(null);
 
   const wave = useCallback(() => {
     setWaveKey((k) => k + 1);
+    setIsWaving(true);
+    if (waveTimeoutRef.current) clearTimeout(waveTimeoutRef.current);
+    // Wave animation runs 1.3s * 2 iterations = 2.6s
+    waveTimeoutRef.current = setTimeout(() => setIsWaving(false), 2600);
   }, []);
 
   const notify = useCallback(
@@ -67,8 +86,37 @@ const Skillo = forwardRef(function Skillo(props, ref) {
 
   useEffect(() => {
     const t = setTimeout(() => wave(), 600);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (waveTimeoutRef.current) clearTimeout(waveTimeoutRef.current);
+    };
   }, [wave]);
+
+  // Eyes follow cursor
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!heroContainerRef.current) return;
+      const rect = heroContainerRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist === 0) {
+        setPupilOffset({ x: 0, y: 0 });
+        return;
+      }
+      // Max offset in pixels - small enough that pupil stays inside eye white
+      const maxOffsetPx = 3;
+      // Fade off: full offset within 500px, then clamp
+      const norm = Math.min(dist, 500) / 500;
+      const ox = (dx / dist) * maxOffsetPx * norm;
+      const oy = (dy / dist) * maxOffsetPx * norm;
+      setPupilOffset({ x: ox, y: oy });
+    };
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
 
   const handleClick = () => {
     setIsOpen((o) => !o);
@@ -111,12 +159,58 @@ const Skillo = forwardRef(function Skillo(props, ref) {
 
         .skillo-float { animation: skillo-float 4s ease-in-out infinite; }
 
+        @keyframes skillo-wave-pulse {
+          0%   { transform: translateY(0) scale(1); }
+          15%  { transform: translateY(-10px) scale(1.08); }
+          30%  { transform: translateY(-4px) scale(1.02); }
+          45%  { transform: translateY(-10px) scale(1.08); }
+          60%  { transform: translateY(-4px) scale(1.02); }
+          75%  { transform: translateY(-8px) scale(1.05); }
+          100% { transform: translateY(0) scale(1); }
+        }
+        @keyframes skillo-wave-pulse-hover {
+          0%   { transform: translateY(-10px) scale(1.05); }
+          15%  { transform: translateY(-14px) scale(1.12); }
+          30%  { transform: translateY(-8px) scale(1.06); }
+          45%  { transform: translateY(-14px) scale(1.12); }
+          60%  { transform: translateY(-8px) scale(1.06); }
+          75%  { transform: translateY(-12px) scale(1.09); }
+          100% { transform: translateY(-10px) scale(1.05); }
+        }
+
         .skillo-lift  { transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1); }
         .skillo-lift.hovering { transform: translateY(-10px) scale(1.05); }
+        .skillo-lift.waving {
+          animation: skillo-wave-pulse 2.6s ease-in-out forwards;
+          transition: none;
+        }
+        .skillo-lift.hovering.waving {
+          animation: skillo-wave-pulse-hover 2.6s ease-in-out forwards;
+          transition: none;
+        }
 
+        @keyframes skillo-hand-appear {
+          0%   { opacity: 0; transform: scale(0.6) rotate(-30deg); }
+          100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        .skillo-hand-wrap {
+          animation: skillo-hand-appear 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          transform-origin: 38% 88%;
+        }
         .skillo-hand {
           transform-origin: 38% 88%;
           animation: skillo-wave 1.3s ease-in-out 2;
+          animation-delay: 0.15s;
+          animation-fill-mode: both;
+        }
+
+        /* Pupil tracking */
+        .skillo-pupil {
+          position: absolute;
+          background: #0B0B2A;
+          border-radius: 50%;
+          transition: transform 120ms ease-out;
+          pointer-events: none;
         }
 
         .skillo-pop  { animation: skillo-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: bottom right; }
@@ -144,10 +238,11 @@ const Skillo = forwardRef(function Skillo(props, ref) {
         )}
 
         {/* The hero widget — fixed bottom-right */}
-        <div className="fixed bottom-6 right-6 z-40" style={{ width: 108, height: 100 }}>
+        <div ref={heroContainerRef} className="fixed bottom-6 right-6 z-40" style={{ width: 108, height: 100 }}>
           <div className="skillo-float w-full h-full">
             <div
-              className={"skillo-lift w-full h-full cursor-pointer relative " + (isHovering ? "hovering" : "")}
+              key={`lift-${waveKey}`}
+              className={"skillo-lift w-full h-full cursor-pointer relative " + (isHovering ? "hovering " : "") + (isWaving ? "waving" : "")}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
               onClick={handleClick}
@@ -156,7 +251,7 @@ const Skillo = forwardRef(function Skillo(props, ref) {
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
               aria-label="Otwórz asystenta Skillo"
             >
-              {/* Body (hero without hand) */}
+              {/* Body (hero without hand, eyes erased) */}
               <img
                 src={BODY_IMG}
                 alt=""
@@ -164,15 +259,45 @@ const Skillo = forwardRef(function Skillo(props, ref) {
                 draggable={false}
               />
 
-              {/* Hand — remounts on wave() to restart animation */}
-              <img
-                key={waveKey}
-                src={HAND_IMG}
-                alt=""
-                draggable={false}
-                className="skillo-hand absolute select-none pointer-events-none"
-                style={{ width: "25%", top: "6%", right: "8%" }}
+              {/* Pupils overlay — two tracked black circles in the eye sockets */}
+              {/* Left eye: center 33.1% 69.6%, pupil ~6.8% × 7% of container */}
+              <div
+                className="skillo-pupil"
+                style={{
+                  width: "6.8%",
+                  height: "7%",
+                  left: "calc(33.1% - 3.4%)",
+                  top: "calc(69.6% - 3.5%)",
+                  transform: `translate(${pupilOffset.x}px, ${pupilOffset.y}px)`,
+                }}
               />
+              {/* Right eye: center 51.4% 69.6% */}
+              <div
+                className="skillo-pupil"
+                style={{
+                  width: "6.8%",
+                  height: "7%",
+                  left: "calc(51.4% - 3.4%)",
+                  top: "calc(69.6% - 3.5%)",
+                  transform: `translate(${pupilOffset.x}px, ${pupilOffset.y}px)`,
+                }}
+              />
+
+              {/* Hand — only appears while waving */}
+              {isWaving && (
+                <div
+                  key={waveKey}
+                  className="skillo-hand-wrap absolute"
+                  style={{ width: "25%", top: "6%", right: "8%" }}
+                >
+                  <img
+                    src={HAND_IMG}
+                    alt=""
+                    draggable={false}
+                    className="skillo-hand w-full h-full select-none pointer-events-none"
+                  />
+                </div>
+              )}
 
               {/* Notification indicator */}
               {hasNotification && !isOpen && (
@@ -290,7 +415,7 @@ function ChatPanel({ onClose, initialMessage, clearInitial }) {
               style={{ background: BRAND }}
             >
               <img
-                src={BODY_IMG}
+                src={BODY_IMG_FULL}
                 alt=""
                 className="object-contain pointer-events-none"
                 style={{
