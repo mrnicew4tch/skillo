@@ -44,7 +44,7 @@ function App() {
           <button
             onClick={() => heroRef.current?.wave()}
             style={{
-              background: "#42079E",
+              background: "#16a34a",
               color: "#fff",
               border: "none",
               borderRadius: 8,
