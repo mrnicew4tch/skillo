@@ -325,7 +325,7 @@ const Skillo = forwardRef(function Skillo(props, ref) {
 // ============================================================
 function ChatPanel({ onClose, initialMessage, clearInitial }) {
   const [messages, setMessages] = useState(() => {
-    const greeting = initialMessage || "Cześć! Jestem Skillo, twój asystent nauki. W czym mogę pomóc?";
+    const greeting = initialMessage || "Cześć! Jestem Skillo, Twój asystent nauki. W czym mogę pomóc?";
     return [{ role: "assistant", content: greeting }];
   });
   const [input, setInput] = useState("");
